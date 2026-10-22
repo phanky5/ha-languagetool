@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+- N-gram downloads now continue where they stopped after a restart, update or
+  reboot, instead of starting over. Partial downloads from older versions are
+  continued too.
+- Interrupted downloads are retried automatically.
+- The app stops immediately when you stop it during a download.
+
 ## 1.0.2
 
 - Security: the app now drops root privileges right after preparing its data

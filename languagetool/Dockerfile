@@ -3,9 +3,9 @@ ARG BUILD_FROM=meyay/languagetool:6.8-13
 FROM ${BUILD_FROM}
 
 # jq reads the app options that Home Assistant writes to /data/options.json.
-# setpriv drops root privileges before LanguageTool starts.
+# setpriv drops root privileges, curl downloads n-grams with resume support.
 # hadolint ignore=DL3018
-RUN apk add --no-cache jq setpriv
+RUN apk add --no-cache curl jq setpriv
 
 COPY run.sh /ha-run.sh
 COPY healthcheck.sh /ha-healthcheck.sh

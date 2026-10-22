@@ -20,6 +20,10 @@ You'll see this line in the log when it's ready:
 Server started
 ```
 
+If the app is restarted or stopped during a download, the download continues
+where it left off on the next start. Short network problems are retried
+automatically.
+
 Later starts are fast, because the data is kept.
 
 ## Configuration
