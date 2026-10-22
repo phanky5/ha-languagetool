@@ -1,0 +1,5 @@
+.DS_Store
+# Local Docker Desktop setup, not part of the app
+docker-compose.yml
+# Local test data
+.test-data/

@@ -1,0 +1,28 @@
+name: LanguageTool
+version: "1.0.0"
+slug: languagetool
+description: >-
+  Self-hosted LanguageTool grammar and spell checker with n-gram and fastText
+  support. Your texts never leave your network.
+url: https://github.com/phanky5/ha-languagetool
+arch:
+  - amd64
+  - aarch64
+init: false
+ports:
+  8081/tcp: 8081
+backup_exclude:
+  - ngrams
+  - fasttext
+options:
+  ngrams:
+    - English
+  fasttext: true
+  java_xms: 512m
+  java_xmx: 1536m
+schema:
+  ngrams:
+    - list(English|German|Spanish|French|Dutch)
+  fasttext: bool
+  java_xms: match(^[0-9]+[mMgG]$)
+  java_xmx: match(^[0-9]+[mMgG]$)

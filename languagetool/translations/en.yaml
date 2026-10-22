@@ -1,0 +1,24 @@
+configuration:
+  ngrams:
+    name: N-gram languages
+    description: >-
+      Languages to download n-gram data for. N-grams improve detection of
+      commonly confused words (e.g. "their" vs. "there"). Downloads are large:
+      English ~9 GB, German/Spanish/French ~1.7 GB each, Dutch ~1.2 GB.
+      Deselected languages are deleted from disk on the next start.
+  fasttext:
+    name: fastText language detection
+    description: >-
+      Use fastText for faster, more accurate automatic language detection.
+      Downloads a ~130 MB model on first start.
+  java_xms:
+    name: Minimum Java memory (JAVA_XMS)
+    description: >-
+      Memory reserved for Java at startup, e.g. 512m or 1g.
+  java_xmx:
+    name: Maximum Java memory (JAVA_XMX)
+    description: >-
+      The most memory Java may use, e.g. 1536m or 2g. Must not be smaller than
+      the minimum.
+network:
+  8081/tcp: LanguageTool API port

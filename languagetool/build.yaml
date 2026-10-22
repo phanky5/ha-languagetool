@@ -1,0 +1,6 @@
+# The app is a thin wrapper around the meyay/languagetool image.
+# To update LanguageTool, change the tag here and in the Dockerfile,
+# then bump "version" in config.yaml.
+build_from:
+  aarch64: meyay/languagetool:6.8-13
+  amd64: meyay/languagetool:6.8-13
