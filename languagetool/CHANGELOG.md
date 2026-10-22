@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Fix: with Watchdog enabled, Home Assistant restarted the app every few
+  minutes while n-grams were downloading, so large downloads never finished.
+  The health check now waits until downloads are done.
+
 ## 1.0.0
 
 - First release.
