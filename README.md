@@ -33,6 +33,38 @@ Raspberry Pi 4/5 with a 64-bit OS).
 Full documentation is in the app's **Documentation** tab, or in
 [languagetool/DOCS.md](languagetool/DOCS.md).
 
+## Connecting your apps
+
+Once the app is running, your LanguageTool server is at:
+
+```text
+http://<your-home-assistant-ip>:8081/v2
+```
+
+For example `http://192.168.1.50:8081/v2`, or
+`http://homeassistant.local:8081/v2` if your network supports `.local` names.
+If you changed the port (see below), use your port instead of `8081`.
+
+| Tool | Where to set it |
+| ---- | --------------- |
+| **Browser extension** (Chrome, Firefox, Edge, Safari) | Extension icon → ⚙️ **Settings** → **Advanced settings** → **LanguageTool server** → **Other server** → enter the address above |
+| **LanguageTool Desktop** (Mac, Windows) | **Settings** → **Advanced** → **LanguageTool server** → **Other server** → enter the address above |
+| **LibreOffice** | **Tools → Options → Language Settings → LanguageTool Server** → enable it and enter the address above |
+| **Obsidian** (LanguageTool plugin) | Server URL: `http://<your-home-assistant-ip>:8081` (without `/v2`) |
+
+To check that the server works, open
+`http://<your-home-assistant-ip>:8081/v2/languages` in your browser. You
+should see a list of languages.
+
+> **Note:** the server has no login. Only use it inside your home network and
+> don't forward the port to the internet.
+
+## Changing the port
+
+The app uses port **8081** by default. To use a different port, open the app's
+**Configuration** tab, scroll to the **Network** section, enter your port next
+to **LanguageTool API port**, click **Save** and restart the app.
+
 ## Credits
 
 This app builds on the excellent

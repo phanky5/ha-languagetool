@@ -63,12 +63,17 @@ Use a number followed by `m` (megabytes) or `g` (gigabytes), for example
 LanguageTool is slow or crashes with "OutOfMemoryError", raise the maximum,
 as long as your machine has the RAM to spare.
 
-### Network port
+### Port
 
-The LanguageTool API listens on port **8081**. You can change the port in the
-**Network** section of the Configuration tab.
+The app uses port **8081** by default. To use a different port:
 
-## Using the server
+1. Scroll down to the **Network** section of this Configuration tab.
+2. Enter your port next to **LanguageTool API port**.
+3. Click **Save** and restart the app.
+
+Use your port instead of `8081` in all addresses below.
+
+## Connecting your apps
 
 The server address is:
 
@@ -76,15 +81,18 @@ The server address is:
 http://<your-home-assistant-ip>:8081/v2
 ```
 
-Some examples:
+For example `http://192.168.1.50:8081/v2`, or
+`http://homeassistant.local:8081/v2` if your network supports `.local` names.
 
-- **Browser extension** (Chrome, Firefox, Edge, Safari): open the extension
-  settings → **Advanced settings** → **LanguageTool server** → **Other server**
-  and enter the address above.
+- **Browser extension** (Chrome, Firefox, Edge, Safari): click the extension
+  icon → ⚙️ **Settings** → **Advanced settings** → **LanguageTool server** →
+  **Other server** and enter the address above.
+- **LanguageTool Desktop** (Mac, Windows): **Settings** → **Advanced** →
+  **LanguageTool server** → **Other server** and enter the address above.
 - **LibreOffice**: **Tools → Options → Language Settings → LanguageTool Server**,
   enable it and enter the address above.
 - **Obsidian** (LanguageTool plugin): set the server URL to
-  `http://<your-home-assistant-ip>:8081`.
+  `http://<your-home-assistant-ip>:8081` (without `/v2`).
 
 To check that the server works, open this address in a browser:
 
