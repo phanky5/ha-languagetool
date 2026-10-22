@@ -110,6 +110,11 @@ data again on its next start.
 
 ## Security
 
+The app only uses root briefly at startup to prepare its data folders. It then
+switches to the unprivileged `languagetool` user, removes all special
+permissions and blocks regaining them. Downloads and LanguageTool itself never
+run as root.
+
 The server has no login. Anyone who can reach port 8081 can use it. Don't
 expose this port to the internet.
 

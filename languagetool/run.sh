@@ -130,5 +130,14 @@ export DISABLE_FASTTEXT="$disable_fasttext"
 export JAVA_XMS="$java_xms"
 export JAVA_XMX="$java_xmx"
 
+# Give the data folders to the unprivileged languagetool user (uid/gid 783).
+find "$NGRAM_DIR" "$FASTTEXT_DIR" \( ! -user 783 -o ! -group 783 \) -exec chown 783:783 {} +
+
+# Drop root for good: switch to the languagetool user, remove all
+# capabilities and block regaining privileges (like Docker's
+# --user, --cap-drop ALL and no-new-privileges). Nothing after this runs as root.
+log "Dropping root privileges. LanguageTool runs as user 'languagetool' (783)."
 log "Starting LanguageTool."
-exec /entrypoint "$@"
+exec setpriv --reuid=783 --regid=783 --clear-groups \
+  --inh-caps=-all --bounding-set=-all --no-new-privs \
+  /sbin/tini -g -e 143 -- /entrypoint "$@"

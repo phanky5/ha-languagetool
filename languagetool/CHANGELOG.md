@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+- Security: the app now drops root privileges right after preparing its data
+  folders. Everything else, including downloads and LanguageTool itself, runs
+  as the unprivileged `languagetool` user with no capabilities and
+  no-new-privileges, as recommended by meyayl/docker-languagetool.
+
 ## 1.0.1
 
 - Fix: with Watchdog enabled, Home Assistant restarted the app every few

@@ -2,9 +2,10 @@ ARG BUILD_FROM=meyay/languagetool:6.8-13
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
-# jq reads the app options that Home Assistant writes to /data/options.json
+# jq reads the app options that Home Assistant writes to /data/options.json.
+# setpriv drops root privileges before LanguageTool starts.
 # hadolint ignore=DL3018
-RUN apk add --no-cache jq
+RUN apk add --no-cache jq setpriv
 
 COPY run.sh /ha-run.sh
 COPY healthcheck.sh /ha-healthcheck.sh
@@ -19,7 +20,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 ENV langtool_languageModel=/data/ngrams \
     langtool_fasttextModel=/data/fasttext/lid.176.bin
 
-ENTRYPOINT ["/sbin/tini", "-g", "-e", "143", "--", "/ha-run.sh"]
+# run.sh prepares /data as root, then drops privileges and starts tini
+ENTRYPOINT ["/ha-run.sh"]
 
 LABEL org.opencontainers.image.title="LanguageTool for Home Assistant" \
       org.opencontainers.image.source="https://github.com/phanky5/ha-languagetool" \

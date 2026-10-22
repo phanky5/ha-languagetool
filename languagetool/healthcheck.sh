@@ -6,4 +6,7 @@
 if ! pgrep -x java >/dev/null 2>&1; then
   exit 0
 fi
-exec /entrypoint healthcheck
+# Docker runs health checks as root, so drop privileges here too.
+exec setpriv --reuid=783 --regid=783 --clear-groups \
+  --inh-caps=-all --bounding-set=-all --no-new-privs \
+  /entrypoint healthcheck
