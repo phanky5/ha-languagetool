@@ -39,6 +39,16 @@ lang_code() {
   esac
 }
 
+lang_name() {
+  case "$1" in
+    en) echo English ;;
+    de) echo German ;;
+    es) echo Spanish ;;
+    fr) echo French ;;
+    nl) echo Dutch ;;
+  esac
+}
+
 # Same download locations as meyayl/docker-languagetool.
 ngram_url() {
   base=https://languagetool.org/download/ngram-data
@@ -190,6 +200,22 @@ if [ "$(to_mb "$java_xms")" -gt "$(to_mb "$java_xmx")" ]; then
 fi
 log "Java memory: minimum $java_xms, maximum $java_xmx."
 
+# --- Speed up checks ----------------------------------------------------------
+# The original entrypoint writes every langtool_* variable into LanguageTool's
+# config.properties. Not using pipelinePrewarming: it prepares all 30+
+# languages at startup, which takes a lot of memory and time.
+if [ "$(option speed_up_checks true)" = "true" ]; then
+  log "Speed up checks is enabled: rule sets and results are cached."
+  # Reuse prepared rule sets instead of building them for every check.
+  export langtool_pipelineCaching=true
+  export langtool_maxPipelinePoolSize=20
+  export langtool_pipelineExpireTimeInSeconds=3600
+  # Remember results of recently checked sentences.
+  export langtool_cacheSize=5000
+else
+  log "Speed up checks is disabled."
+fi
+
 # --- N-gram languages ---------------------------------------------------------
 if [ -f "$OPTIONS_FILE" ]; then
   selected_names=$(jq -r '(.ngrams // []) | .[]' "$OPTIONS_FILE")
@@ -267,8 +293,14 @@ fi
 ready_codes=$(echo "$ready_codes" | xargs)
 if [ -n "$ready_codes" ]; then
   download_langs=$(echo "$ready_codes" | tr ' ' ',')
+  names=""
+  for code in $ready_codes; do
+    names="${names:+$names, }$(lang_name "$code")"
+  done
+  log "N-gram languages in use: $names"
 else
   download_langs="none"
+  log "N-gram languages in use: none"
 fi
 
 # --- Hand over to the original entrypoint -------------------------------------

@@ -1,5 +1,5 @@
 name: LanguageTool
-version: "1.0.3"
+version: "1.0.4"
 slug: languagetool
 description: >-
   Self-hosted LanguageTool grammar and spell checker with n-gram and fastText
@@ -20,9 +20,11 @@ options:
   fasttext: true
   java_xms: 512m
   java_xmx: 1536m
+  speed_up_checks: true
 schema:
   ngrams:
     - list(English|German|Spanish|French|Dutch)
   fasttext: bool
   java_xms: match(^[0-9]+[mMgG]$)
   java_xmx: match(^[0-9]+[mMgG]$)
+  speed_up_checks: bool

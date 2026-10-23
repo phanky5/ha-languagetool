@@ -9,6 +9,7 @@ RUN apk add --no-cache curl jq setpriv
 
 COPY run.sh /ha-run.sh
 COPY healthcheck.sh /ha-healthcheck.sh
+COPY logback.xml /ha-logback.xml
 RUN chmod a+x /ha-run.sh /ha-healthcheck.sh
 
 # Replace the image's health check: it fails while n-grams are downloading,
@@ -19,6 +20,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 # Keep all downloaded data in the app's persistent /data folder
 ENV langtool_languageModel=/data/ngrams \
     langtool_fasttextModel=/data/fasttext/lid.176.bin
+
+# Same logging as the image, without a log line for every health check
+ENV LOGBACK_CONFIG=/ha-logback.xml
 
 # run.sh prepares /data as root, then drops privileges and starts tini
 ENTRYPOINT ["/ha-run.sh"]

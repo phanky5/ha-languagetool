@@ -20,5 +20,11 @@ configuration:
     description: >-
       The most memory Java may use, e.g. 1536m or 2g. Must not be smaller than
       the minimum.
+  speed_up_checks:
+    name: Speed up checks
+    description: >-
+      Keep LanguageTool's prepared rules in memory and remember results of
+      recently checked sentences. Makes checks clearly faster, especially with
+      the browser extension. Uses some extra memory.
 network:
   8081/tcp: LanguageTool API port

@@ -67,6 +67,17 @@ Use a number followed by `m` (megabytes) or `g` (gigabytes), for example
 LanguageTool is slow or crashes with "OutOfMemoryError", raise the maximum,
 as long as your machine has the RAM to spare.
 
+### Speed up checks
+
+Enabled by default. LanguageTool keeps the prepared rules for each language
+in memory instead of building them again for every check, and remembers the
+results of the last 5,000 checked sentences. This makes checks much faster,
+especially with the browser extension, which sends your text again and again
+while you type. It uses some extra memory. The first check per language after
+a start is still slow.
+
+Turn it off only if the app runs short of memory.
+
 ### Port
 
 The app uses port **8081** by default. To use a different port:
