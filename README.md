@@ -14,6 +14,8 @@ hardware and never leave your network.
   languages are removed from disk automatically.
 - **fastText** language detection
 - Adjustable Java memory
+- **Speed up checks**: caches prepared rules and recent results for faster
+  checks
 - Large downloads are excluded from Home Assistant backups
 - Works with the official LanguageTool browser extensions, LibreOffice, Obsidian
   and anything else that can use a custom LanguageTool server
@@ -58,6 +60,21 @@ should see a list of languages.
 
 > **Note:** the server has no login. Only use it inside your home network and
 > don't forward the port to the internet.
+
+## If checks are slow
+
+1. Open the app's **Configuration** tab.
+2. Make sure **Speed up checks** is turned on. It is on by default since
+   version 1.0.4.
+3. Give Java more memory, up to `4g`. Set **Maximum Java memory (JAVA_XMX)**
+   to `3g` or `4g`, and set **Minimum Java memory (JAVA_XMS)** to the same
+   value.
+4. Click **Save** and restart the app.
+
+Only raise the memory if your machine has the RAM to spare. With two n-gram
+languages, 8 GB of RAM or more is a good fit for `3g`–`4g`. Going higher than
+`4g` doesn't make checks faster. The first check after a restart is always
+slower, because LanguageTool has to load its rules first.
 
 ## Changing the port
 
