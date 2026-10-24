@@ -1,0 +1,113 @@
+name: Check for LanguageTool updates
+
+# Once a week, looks for a newer meyay/languagetool image on Docker Hub.
+# If there is one, opens a pull request that switches the app to it and
+# runs all checks on it. Nothing is released until you merge that pull request.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  check:
+    name: Look for a newer base image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Compare versions
+        id: versions
+        run: |
+          current=$(sed -n 's|^ARG BUILD_FROM=meyay/languagetool:||p' languagetool/Dockerfile)
+          # Tags look like 6.8-13: LanguageTool version, then the image build number.
+          latest=$(curl -fsS "https://hub.docker.com/v2/repositories/meyay/languagetool/tags?page_size=100" |
+            jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]+$' |
+            sort -V | tail -n 1)
+          echo "Current: $current, newest on Docker Hub: $latest"
+          if [ -z "$current" ] || [ -z "$latest" ]; then
+            echo "::error::Couldn't read the versions."
+            exit 1
+          fi
+          newest=$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -n 1)
+          if [ "$latest" = "$current" ] || [ "$newest" = "$current" ]; then
+            echo "Already up to date."
+            echo "update=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "update=true" >>"$GITHUB_OUTPUT"
+          fi
+          echo "current=$current" >>"$GITHUB_OUTPUT"
+          echo "latest=$latest" >>"$GITHUB_OUTPUT"
+
+      - name: Open a pull request
+        if: steps.versions.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT: ${{ steps.versions.outputs.current }}
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          branch="upstream/$LATEST"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "Branch $branch already exists, nothing to do."
+            exit 0
+          fi
+
+          # New LanguageTool version (6.8 -> 6.9): raise the minor app version.
+          # Only a new image build (6.8-13 -> 6.8-14): raise the patch version.
+          app=$(sed -n 's/^version: "\(.*\)"/\1/p' languagetool/config.yaml)
+          major=${app%%.*}; rest=${app#*.}; minor=${rest%%.*}; patch=${rest#*.}
+          if [ "${CURRENT%-*}" != "${LATEST%-*}" ]; then
+            new_app="$major.$((minor + 1)).0"
+            note="Updated LanguageTool from ${CURRENT%-*} to ${LATEST%-*} (image \`meyay/languagetool:$LATEST\`)."
+          else
+            new_app="$major.$minor.$((patch + 1))"
+            note="Updated the base image to \`meyay/languagetool:$LATEST\` (still LanguageTool ${LATEST%-*})."
+          fi
+
+          sed -i "s|meyay/languagetool:$CURRENT|meyay/languagetool:$LATEST|" \
+            languagetool/Dockerfile languagetool/build.yaml
+          sed -i "s/^version: \"$app\"/version: \"$new_app\"/" languagetool/config.yaml
+          awk -v ver="$new_app" -v note="$note" '
+            !done && /^## / { print "## " ver "\n\n- " note "\n"; done = 1 }
+            { print }' languagetool/CHANGELOG.md >/tmp/changelog
+          mv /tmp/changelog languagetool/CHANGELOG.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -am "Update base image to meyay/languagetool:$LATEST ($new_app)"
+          git push origin "$branch"
+
+          # Pushes made by this workflow don't start other workflows on their
+          # own, so start the checks (linter, test builds, smoke test) here.
+          gh workflow run lint.yaml --ref "$branch"
+
+          body=$(cat <<BODY
+          A newer base image is available: \`meyay/languagetool:$CURRENT\` → \`meyay/languagetool:$LATEST\`.
+
+          This pull request switches the app to it and sets the app version to **$new_app**. Nothing changes for users until it is merged.
+
+          **Before merging**
+          1. Check the upstream changes: https://github.com/meyayl/docker-languagetool/commits/main and https://github.com/languagetool-org/languagetool/blob/master/languagetool-standalone/CHANGES.md
+          2. Wait for the checks below. The smoke test starts the app and checks English and German texts, with and without the secret URL.
+          3. Optional: try it on Home Assistant. In the app store, open ⋮ → Repositories and add \`https://github.com/${GITHUB_REPOSITORY}#$branch\`. Install "LanguageTool" from that new repository, stop your normal app, and start the test copy (no n-grams needed). Remove the test copy and the repository when you're done.
+          4. Merge. Home Assistant then offers the update.
+          BODY
+          )
+          if gh pr create --base main --head "$branch" \
+            --title "Update LanguageTool base image to $LATEST" --body "$body"; then
+            echo "Pull request opened."
+          else
+            # Happens if "Allow GitHub Actions to create and approve pull requests" is off.
+            gh issue create --title "LanguageTool base image $LATEST is available" \
+              --body "$body
+
+          The branch \`$branch\` is ready, but this workflow isn't allowed to open the pull request. Open it here: https://github.com/${GITHUB_REPOSITORY}/compare/main...$branch?expand=1"
+          fi
