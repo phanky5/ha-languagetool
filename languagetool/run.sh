@@ -15,6 +15,14 @@ LT_GID=783
 # Download attempts per language before giving up for this start.
 MAX_ATTEMPTS=10
 
+# Secret URL: nginx listens on the app port and LanguageTool moves here.
+APP_PORT=8081
+INTERNAL_PORT=8082
+SECRET_KEY_FILE=/data/secret_key
+SECRET_KEY_LENGTH=40
+# Written once the check for old installs with default n-grams has run.
+NGRAM_DEFAULT_CHECKED=/data/.ngram_default_checked
+
 log() { echo "[ha-languagetool] $*"; }
 
 # Read one option, falling back to a default if the file or key is missing.
@@ -86,6 +94,26 @@ pause() {
 as_languagetool() {
   setpriv --reuid=$LT_UID --regid=$LT_GID --clear-groups \
     --inh-caps=-all --bounding-set=-all --no-new-privs "$@"
+}
+
+# Save changed app options through the Supervisor, so they show up in the
+# Configuration tab. $1 is a jq filter applied to the options. Earlier saved
+# changes are applied too, because options.json isn't updated until restart.
+saved_changes="."
+save_options() {
+  if [ -z "${SUPERVISOR_TOKEN:-}" ] || [ ! -f "$OPTIONS_FILE" ]; then
+    return 1
+  fi
+  changes="$saved_changes | $1"
+  if jq -c "{options: ($changes)}" "$OPTIONS_FILE" |
+    as_languagetool curl -fsS --max-time 30 -X POST \
+      -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+      -H "Content-Type: application/json" \
+      --data-binary @- http://supervisor/addons/self/options >/dev/null 2>&1; then
+    saved_changes=$changes
+    return 0
+  fi
+  return 1
 }
 
 # Ask the server for the full size of a download.
@@ -216,11 +244,73 @@ else
   log "Speed up checks is disabled."
 fi
 
+# --- Secret URL ---------------------------------------------------------------
+# With a secret URL, nginx answers on the app port and only passes requests
+# under /<key>/ on to LanguageTool, which then listens on localhost only.
+secret_url=false
+if [ "$(option secret_url false)" = "true" ]; then
+  secret_url=true
+  secret_key=$(option secret_key "")
+  if [ -z "$secret_key" ]; then
+    if [ -s "$SECRET_KEY_FILE" ]; then
+      # Made on an earlier start, but couldn't be saved to the options then.
+      secret_key=$(cat "$SECRET_KEY_FILE")
+    else
+      secret_key=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$SECRET_KEY_LENGTH")
+      log "Created a new secret key."
+    fi
+    if save_options ".secret_key = \"$secret_key\""; then
+      rm -f "$SECRET_KEY_FILE"
+      log "The key is saved in the Configuration tab (reload the page to see it)."
+    else
+      (umask 077 && echo "$secret_key" >"$SECRET_KEY_FILE")
+      log "WARNING: Couldn't save the key to the Configuration tab."
+      log "WARNING: The app keeps it. Copy it from the line below."
+    fi
+    log "Your secret URL: http://<your-home-assistant-ip>:$APP_PORT/$secret_key/v2"
+  else
+    rm -f "$SECRET_KEY_FILE"
+    if ! echo "$secret_key" | grep -Eq '^[A-Za-z0-9_-]{32,128}$'; then
+      log "ERROR: The secret key must be 32 to 128 characters long and use only"
+      log "ERROR: letters, digits, '-' and '_'. Clear the field to get a new key."
+      exit 1
+    fi
+    log "Your secret URL: http://<your-home-assistant-ip>:$APP_PORT/$(echo "$secret_key" | cut -c1-4).../v2"
+    log "The full key is in the Configuration tab."
+  fi
+  log "Secret URL is enabled. Requests without the key get no answer."
+else
+  log "Secret URL is disabled."
+  rm -f "$SECRET_KEY_FILE"
+fi
+
 # --- N-gram languages ---------------------------------------------------------
 if [ -f "$OPTIONS_FILE" ]; then
   selected_names=$(jq -r '(.ngrams // []) | .[]' "$OPTIONS_FILE")
 else
-  selected_names="English"
+  selected_names=""
+fi
+
+# Up to version 1.0.4, English was selected by default. Home Assistant only
+# keeps options that were saved, so an install that never saved its options
+# now gets the new empty default. Keep English for those installs instead of
+# deleting ~9 GB of data, and save the choice so it shows in the settings.
+if [ ! -f "$NGRAM_DEFAULT_CHECKED" ]; then
+  if [ -z "$selected_names" ] &&
+    { [ -d "$NGRAM_DIR/en" ] || [ -f "$NGRAM_DIR/ngrams-en.zip" ]; }; then
+    log "English n-grams were selected by default before version 1.1.0. Keeping them."
+    log "To remove them, deselect English in the Configuration tab."
+    selected_names="English"
+    if save_options '.ngrams = ["English"]'; then
+      touch "$NGRAM_DEFAULT_CHECKED"
+    else
+      # Not marking the check as done, so the data is kept on the next start too.
+      log "WARNING: Couldn't save English to the app options."
+      log "WARNING: Select English in the Configuration tab to keep these n-grams."
+    fi
+  else
+    touch "$NGRAM_DEFAULT_CHECKED"
+  fi
 fi
 
 selected_codes=""
@@ -287,7 +377,7 @@ if [ -n "$selected_codes" ]; then
     fi
   done
 else
-  log "No n-gram languages selected."
+  log "No n-gram languages selected. You can pick some in the Configuration tab."
 fi
 
 ready_codes=$(echo "$ready_codes" | xargs)
@@ -303,12 +393,42 @@ else
   log "N-gram languages in use: none"
 fi
 
+# --- nginx for the secret URL -------------------------------------------------
+listen_port=$APP_PORT
+if [ "$secret_url" = "true" ]; then
+  listen_port=$INTERNAL_PORT
+  conf_dir=/tmp/nginx
+  rm -rf "$conf_dir"
+  mkdir -p "$conf_dir"
+  sed -e "s|@APP_PORT@|$APP_PORT|g" \
+    -e "s|@INTERNAL_PORT@|$INTERNAL_PORT|g" \
+    -e "s|@SECRET_KEY@|$secret_key|g" \
+    -e "s|@CONF_DIR@|$conf_dir|g" \
+    /ha-nginx.conf >"$conf_dir/nginx.conf"
+  chown -R $LT_UID:$LT_GID "$conf_dir"
+  chmod 700 "$conf_dir"
+  chmod 600 "$conf_dir/nginx.conf"
+  log "Starting nginx for the secret URL."
+  as_languagetool nginx -c "$conf_dir/nginx.conf" -e stderr &
+  nginx_pid=$!
+  pause 2
+  if ! kill -0 "$nginx_pid" 2>/dev/null; then
+    log "ERROR: nginx didn't start, see the lines above."
+    exit 1
+  fi
+  # Makes LanguageTool listen on localhost only, see java-wrapper.sh.
+  export PATH="/usr/local/ha-bin:$PATH"
+fi
+# The health check reads the LanguageTool port from here.
+echo "$listen_port" >/tmp/ha-listen-port
+
 # --- Hand over to the original entrypoint -------------------------------------
 # The entrypoint only unpacks complete downloads and skips installed languages.
 export download_ngrams_for_langs="$download_langs"
 export DISABLE_FASTTEXT="$disable_fasttext"
 export JAVA_XMS="$java_xms"
 export JAVA_XMX="$java_xmx"
+export LISTEN_PORT="$listen_port"
 
 # Drop root for good: switch to the languagetool user, remove all
 # capabilities and block regaining privileges (like Docker's

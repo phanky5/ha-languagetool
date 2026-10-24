@@ -1,5 +1,5 @@
 name: LanguageTool
-version: "1.0.4"
+version: "1.1.0"
 slug: languagetool
 description: >-
   Self-hosted LanguageTool grammar and spell checker with n-gram and fastText
@@ -9,18 +9,22 @@ arch:
   - amd64
   - aarch64
 init: false
+# Lets the app save a generated secret key and the n-gram choice of older
+# installs to its own options.
+hassio_api: true
 ports:
   8081/tcp: 8081
 backup_exclude:
   - ngrams
   - fasttext
 options:
-  ngrams:
-    - English
+  ngrams: []
   fasttext: true
   java_xms: 512m
   java_xmx: 1536m
   speed_up_checks: true
+  secret_url: false
+  secret_key: ""
 schema:
   ngrams:
     - list(English|German|Spanish|French|Dutch)
@@ -28,3 +32,5 @@ schema:
   java_xms: match(^[0-9]+[mMgG]$)
   java_xmx: match(^[0-9]+[mMgG]$)
   speed_up_checks: bool
+  secret_url: bool
+  secret_key: match(^([A-Za-z0-9_-]{32,128})?$)

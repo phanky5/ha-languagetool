@@ -2,10 +2,12 @@ configuration:
   ngrams:
     name: N-gram languages
     description: >-
-      Languages to download n-gram data for. N-grams improve detection of
-      commonly confused words (e.g. "their" vs. "there"). Downloads are large:
-      English ~9 GB, German/Spanish/French ~1.7 GB each, Dutch ~1.2 GB.
-      Deselected languages are deleted from disk on the next start.
+      Optional. Languages to download n-gram data for. N-grams improve
+      detection of commonly confused words (e.g. "their" vs. "there"). None
+      are selected by default, because downloads are large: English ~9 GB,
+      German/Spanish/French ~1.7 GB each, Dutch ~1.2 GB. Plan for about three
+      times that in free disk space. Deselected languages are deleted from
+      disk on the next start.
   fasttext:
     name: fastText language detection
     description: >-
@@ -26,5 +28,17 @@ configuration:
       Keep LanguageTool's prepared rules in memory and remember results of
       recently checked sentences. Makes checks clearly faster, especially with
       the browser extension. Uses some extra memory.
+  secret_url:
+    name: Secret URL
+    description: >-
+      For access from outside your home, e.g. with Cloudflared. LanguageTool
+      then only answers at http://<address>:8081/<secret key>/v2. Requests
+      without the key get no answer, also on your home network.
+  secret_key:
+    name: Secret key
+    description: >-
+      Leave empty and restart the app to get a new random key. Or enter your
+      own: 32 to 128 letters, digits, "-" or "_". Upper and lower case count.
+      Treat the key like a password.
 network:
   8081/tcp: LanguageTool API port

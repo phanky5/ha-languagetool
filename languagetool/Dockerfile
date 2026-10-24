@@ -4,13 +4,16 @@ FROM ${BUILD_FROM}
 
 # jq reads the app options that Home Assistant writes to /data/options.json.
 # setpriv drops root privileges, curl downloads n-grams with resume support.
+# nginx serves the secret URL when that option is on.
 # hadolint ignore=DL3018
-RUN apk add --no-cache curl jq setpriv
+RUN apk add --no-cache curl jq nginx setpriv
 
 COPY run.sh /ha-run.sh
 COPY healthcheck.sh /ha-healthcheck.sh
 COPY logback.xml /ha-logback.xml
-RUN chmod a+x /ha-run.sh /ha-healthcheck.sh
+COPY nginx.conf /ha-nginx.conf
+COPY java-wrapper.sh /usr/local/ha-bin/java
+RUN chmod a+x /ha-run.sh /ha-healthcheck.sh /usr/local/ha-bin/java
 
 # Replace the image's health check: it fails while n-grams are downloading,
 # which makes Home Assistant's watchdog restart the app and lose the download.

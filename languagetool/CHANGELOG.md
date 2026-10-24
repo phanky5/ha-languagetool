@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.0
+
+- New option **Secret URL** for access from outside your home, for example
+  through Cloudflared. LanguageTool then only answers at
+  `http://<address>:8081/<secret key>/v2`. Requests without the key get no
+  answer. The app creates a random 40-character key for you, or you can enter
+  your own. Off by default.
+- N-grams are now optional: new installs no longer download the ~9 GB English
+  n-grams by default. Pick n-gram languages in the Configuration tab if you
+  want them.
+- Updating keeps your English n-grams, even if you never saved your settings.
+- The app now has access to the Supervisor API, only to save a new secret key
+  and the n-gram choice above to its own settings.
+
 ## 1.0.4
 
 - New option **Speed up checks** (on by default): LanguageTool keeps prepared
