@@ -111,8 +111,8 @@ and lower case count, so `AbC` and `abc` are different keys. To get a new
 random key, clear the field and restart. If the key is too short or has other
 characters, the app doesn't start and the log says why.
 
-See [Access from outside your home](#access-from-outside-your-home) for a
-setup example.
+The section **Access from outside your home** further down has a setup
+example.
 
 ### Port
 
